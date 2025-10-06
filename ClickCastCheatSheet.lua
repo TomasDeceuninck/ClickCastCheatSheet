@@ -6,8 +6,8 @@
 
 -- *** 1. CONFIGURATION: CORE ADJUSTABLE PARAMETERS ***
 local BASE_ICON_SIZE = 25; -- Primary icon size
-local MOD_ICON_SIZE = 12.5; -- Modifier icon size
-local SPACING = 0; 
+local MOD_ICON_SIZE = 15; -- Modifier icon size
+local SPACING = 2; 
 local ADDON_NAME = "ClickCastCheatSheet";
 
 -- *** 2. GLOBAL SCREEN POSITION OFFSET ***
@@ -23,6 +23,13 @@ local ZOOM_MAX_COORD = 0.90;
 local B_SIZE = BASE_ICON_SIZE;
 local M_SIZE = MOD_ICON_SIZE;
 local isInitialized = false;
+-- Border thickness in pixels around each icon
+local BORDER = 1;
+
+-- Helper to round to nearest integer pixel to avoid fractional-pixel alignment issues
+local function Round(n)
+    return math.floor((n) + 0.5)
+end
 
 -- Saved-variables table (populated by WoW when declared in the .toc)
 -- ClickCastCheatSheetDB = { x = <number>, y = <number> }
@@ -33,15 +40,15 @@ local MOD_OFFSET = (B_SIZE / 2) + (M_SIZE / 2) + SPACING;
 -- BASE ANCHORS (Relative to the container's center 0,0) - Center point for the 5 main icons.
 local BASE_ANCHORS = {
     -- MiddleButton (3): Top Center
-    ["MiddleButton"] = {x = 0, y = (B_SIZE + SPACING * 2)},
+    ["MiddleButton"] = {x = 0, y = (B_SIZE + SPACING * 2) - (M_SIZE/2)},
     -- LeftButton (1): Left Center
     ["LeftButton"]   = {x = -(B_SIZE + SPACING * 2), y = 0},
     -- RightButton (2): Right Center
     ["RightButton"]  = {x = (B_SIZE + SPACING * 2), y = 0},
     -- Button4 (4): Bottom Left
-    ["Button4"]      = {x = -(B_SIZE/2 + SPACING), y = -(B_SIZE + B_SIZE * 0.75)},
+    ["Button4"]      = {x = -(B_SIZE/2 + SPACING) + (B_SIZE/3), y = -(B_SIZE + B_SIZE * 0.85)},
     -- Button5 (5): Bottom Right (Offset to be visually below Button4)
-    ["Button5"]      = {x = (B_SIZE/2 + SPACING), y = (-(B_SIZE + B_SIZE * 0.75) - (B_SIZE / 2))}, 
+    ["Button5"]      = {x = (B_SIZE/2 + SPACING) + (B_SIZE/3), y = (-(B_SIZE + B_SIZE * 0.85) - (B_SIZE / 2))}, 
 };
 
 -- Configuration: {key, button, modifier, frameSize, x_rel, y_rel}
@@ -171,20 +178,52 @@ local function InitializeWorker(self)
             end
 
             -- 2. Create the Icon Frame
+            -- Create an icon frame slightly larger than the icon so we can draw a border
+            -- without shrinking the visible icon area.
             local iconFrame = CreateFrame("Frame", ADDON_NAME .. key .. "IconFrame", f_container);
-            iconFrame:SetSize(config.frameSize, config.frameSize);
+            iconFrame:SetSize(config.frameSize + (BORDER * 2), config.frameSize + (BORDER * 2));
+            -- Create 4 solid-color textures to form a 2px black border inside the frame
+            local top = iconFrame:CreateTexture(nil, "OVERLAY")
+            top:SetColorTexture(0,0,0,1)
+            top:SetPoint("TOPLEFT", iconFrame, "TOPLEFT", 0, 0)
+            top:SetPoint("TOPRIGHT", iconFrame, "TOPRIGHT", 0, 0)
+            top:SetHeight(BORDER)
+
+            local bottom = iconFrame:CreateTexture(nil, "OVERLAY")
+            bottom:SetColorTexture(0,0,0,1)
+            bottom:SetPoint("BOTTOMLEFT", iconFrame, "BOTTOMLEFT", 0, 0)
+            bottom:SetPoint("BOTTOMRIGHT", iconFrame, "BOTTOMRIGHT", 0, 0)
+            bottom:SetHeight(BORDER)
+
+            local left = iconFrame:CreateTexture(nil, "OVERLAY")
+            left:SetColorTexture(0,0,0,1)
+            left:SetPoint("TOPLEFT", iconFrame, "TOPLEFT", 0, 0)
+            left:SetPoint("BOTTOMLEFT", iconFrame, "BOTTOMLEFT", 0, 0)
+            left:SetWidth(BORDER)
+
+            local right = iconFrame:CreateTexture(nil, "OVERLAY")
+            right:SetColorTexture(0,0,0,1)
+            right:SetPoint("TOPRIGHT", iconFrame, "TOPRIGHT", 0, 0)
+            right:SetPoint("BOTTOMRIGHT", iconFrame, "BOTTOMRIGHT", 0, 0)
+            right:SetWidth(BORDER)
             
             -- Calculate Final Position
             local baseAnchor = BASE_ANCHORS[button];
             local totalX = baseAnchor.x + (config.x_rel or 0);
             local totalY = baseAnchor.y + (config.y_rel or 0);
-            
+            -- Round to whole pixels to avoid renderer rounding causing 1px asymmetry
+            totalX = Round(totalX)
+            totalY = Round(totalY)
+
             iconFrame:SetPoint("CENTER", f_container, "CENTER", totalX, totalY);
             iconFrame:SetFrameLevel(f_container:GetFrameLevel() + 1);
             
             -- 3. Create the Texture
             local texture = iconFrame:CreateTexture(nil, "BACKGROUND");
-            texture:SetAllPoints(true);
+            -- Place the icon texture inset by the border thickness so the icon keeps its
+            -- original configured size while the border occupies the extra padding.
+            texture:SetPoint("TOPLEFT", iconFrame, "TOPLEFT", BORDER, -BORDER);
+            texture:SetPoint("BOTTOMRIGHT", iconFrame, "BOTTOMRIGHT", -BORDER, BORDER);
             texture:SetTexture(ICON_TEXTURE);
             -- Apply the zoom configuration
             texture:SetTexCoord(ZOOM_MIN_COORD, ZOOM_MAX_COORD, ZOOM_MIN_COORD, ZOOM_MAX_COORD);
