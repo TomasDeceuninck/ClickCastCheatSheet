@@ -1,0 +1,18 @@
+package-as: ClickCastCheatSheet
+enable-nolib-creation: no
+ignore:
+  - .github
+  - docs
+  - tests
+  - .vscode
+  - README.md
+  - .gitattributes
+  - scripts
+  - pkgmeta.yaml
+  - .pkgmeta
+include-license: yes
+
+# Optional: if you want to override the changelog that CurseForge auto-generates,
+# add a changelog entry here. Uncomment and edit as needed.
+#changelog: |
+#  - 1.2.3 - Fixed issue with ...

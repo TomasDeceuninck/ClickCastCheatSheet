@@ -1,0 +1,39 @@
+name: CurseForge Automatic Packaging
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Trigger CurseForge packaging
+        env:
+          CF_PROJECT_ID: ${{ secrets.CURSEFORGE_PROJECT_ID }}
+          CF_TOKEN: ${{ secrets.CURSEFORGE_API_TOKEN }}
+        run: |
+          url="https://www.curseforge.com/api/projects/${CF_PROJECT_ID}/package?token=${CF_TOKEN}"
+          payload="{\"ref\":\"${GITHUB_REF}\",\"after\":\"${GITHUB_SHA}\"}"
+          echo "Posting packaging request to CurseForge"
+          http_body_file=/tmp/cf_response_body.json
+          status=$(curl -s -X POST "$url" -H "Content-Type: application/json" -d "$payload" -o $http_body_file -w "%{http_code}")
+          echo "HTTP status: $status"
+          echo "Response body:" && cat $http_body_file || true
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "CurseForge packaging request failed"
+            exit 1
+          fi
+
+      - name: Upload CurseForge response artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: curseforge-package-response
+          path: /tmp/cf_response_body.json
+

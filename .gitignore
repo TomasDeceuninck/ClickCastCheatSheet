@@ -1,0 +1,14 @@
+# Packaging artifacts
+dist/
+*.zip
+*.meta.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor folders and files
+.vscode/
+*.suo
+*.user
+*.log
