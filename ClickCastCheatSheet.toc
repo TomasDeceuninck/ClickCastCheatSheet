@@ -5,3 +5,4 @@
 ## Author: ProfFuseigo
 
 ClickCastCheatSheet.lua
+## SavedVariablesPerCharacter: ClickCastCheatSheetDB

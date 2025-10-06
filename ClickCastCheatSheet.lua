@@ -24,6 +24,9 @@ local B_SIZE = BASE_ICON_SIZE;
 local M_SIZE = MOD_ICON_SIZE;
 local isInitialized = false;
 
+-- Saved-variables table (populated by WoW when declared in the .toc)
+-- ClickCastCheatSheetDB = { x = <number>, y = <number> }
+
 -- Vertical displacement for modifier icons relative to the base icon center.
 local MOD_OFFSET = (B_SIZE / 2) + (M_SIZE / 2) + SPACING; 
 
@@ -119,15 +122,32 @@ local function InitializeWorker(self)
     f_container:SetFrameStrata("HIGH");
     f_container:SetSize(200, 200); -- Container size to encompass all 15 icons
     
-    -- Anchor using the global offset variables
-    f_container:SetPoint("CENTER", UIParent, "CENTER", SCREEN_OFFSET_X, SCREEN_OFFSET_Y);
+    -- Anchor using the saved variables if present, otherwise the global offset variables
+    ClickCastCheatSheetDB = ClickCastCheatSheetDB or {};
+    local savedX, savedY = ClickCastCheatSheetDB.x, ClickCastCheatSheetDB.y;
+    if type(savedX) == "number" and type(savedY) == "number" then
+        f_container:SetPoint("CENTER", UIParent, "CENTER", savedX, savedY);
+    else
+        f_container:SetPoint("CENTER", UIParent, "CENTER", SCREEN_OFFSET_X, SCREEN_OFFSET_Y);
+    end
     f_container:SetClampedToScreen(true);
     f_container:SetMovable(true);
     f_container:SetUserPlaced(true);
     f_container:EnableMouse(true);
     f_container:RegisterForDrag("LeftButton");
     f_container:SetScript("OnDragStart", f_container.StartMoving);
-    f_container:SetScript("OnDragStop", f_container.StopMovingOrSizing);
+    -- When the user stops dragging, stop moving and save the center offsets
+    f_container:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing();
+        -- Ensure the saved table exists
+        ClickCastCheatSheetDB = ClickCastCheatSheetDB or {};
+        local px, py = self:GetCenter();
+        local ux, uy = UIParent:GetCenter();
+        if px and py and ux and uy then
+            ClickCastCheatSheetDB.x = px - ux;
+            ClickCastCheatSheetDB.y = py - uy;
+        end
+    end);
 
     for _, config in ipairs(SPELL_CONFIG) do
         local foundSpellId = FindBoundSpellID(config.button, config.modifier);
